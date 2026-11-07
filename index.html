@@ -19,8 +19,8 @@
 html,body{height:100%;margin:0;background:#070a0d;color:var(--ink);font-family:var(--body);overflow:hidden}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-#viewport{position:absolute;inset:0;display:grid;place-items:center}
-#stage{width:1600px;height:900px;background:var(--bg);position:relative;transform-origin:center center;flex:none}
+#viewport{position:absolute;inset:0;overflow:hidden}
+#stage{width:1600px;height:900px;background:var(--bg);position:absolute;left:50%;top:50%;transform-origin:center center}
 .slide{position:absolute;inset:0;display:none;grid-template-columns:920px minmax(0,1fr);grid-template-rows:auto 1fr;gap:0 40px;padding:44px 56px 70px}
 .slide.on{display:grid}
 .slide.full{grid-template-columns:1fr}
@@ -429,7 +429,7 @@ function frame(now){
   try{s.draw&&s.draw(t,s.st);}catch(e){console.error(e);}
   requestAnimationFrame(frame);
 }
-function fit(){const k=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform=`scale(${k})`;}
+function fit(){const k=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform=`translate(-50%,-50%) scale(${k})`;}
 addEventListener('resize',fit);fit();
 addEventListener('keydown',e=>{if(e.target.matches('input')&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))return;
   const k=e.key;if(k==='ArrowRight'||k==='PageDown'||k===' '||k==='ArrowDown'){e.preventDefault();next();}
