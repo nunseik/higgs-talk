@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From Beta Decay to the Higgs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* one visual world: a dark lecture hall. Big canvas left, the formula and its book reference right */
+  --bg:#0d1318; --panel:#141c23; --ink:#e7ecef; --muted:#8d9aa5; --rule:#24303a;
+  --cyan:#5cc6e6; --amber:#f2a65a; --red:#ff6f69; --green:#8fd17f; --violet:#b9a2f2;
+  --display:"Newsreader", Georgia, serif; --body:"IBM Plex Sans", Arial, sans-serif; --mono:"IBM Plex Mono", Menlo, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#070a0d;color:var(--ink);font-family:var(--body);overflow:hidden}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+#viewport{position:absolute;inset:0;display:grid;place-items:center}
+#stage{width:1600px;height:900px;background:var(--bg);position:relative;transform-origin:center center;flex:none}
+.slide{position:absolute;inset:0;display:none;grid-template-columns:920px minmax(0,1fr);grid-template-rows:auto 1fr;gap:0 40px;padding:44px 56px 70px}
+.slide.on{display:grid}
+.slide.full{grid-template-columns:1fr}
+.head{grid-column:1/-1;margin-bottom:18px}
+.kick{font-family:var(--mono);font-size:17px;color:var(--cyan);letter-spacing:.03em}
+.kick .pg{color:var(--muted);margin-left:14px}
+h1{font-family:var(--display);font-weight:600;font-size:56px;line-height:1.05;margin:6px 0 0;text-wrap:balance}
+canvas{width:920px;height:589px;display:block;border-radius:10px;background:#0a1015}
+.full canvas{width:1488px}
+.right{display:flex;flex-direction:column;gap:22px;min-width:0;overflow:hidden}
+.tex{overflow:hidden}
+.tex mjx-container{margin:0!important;text-align:left!important}
+.tex{font-size:30px;color:var(--ink)}
+.tex.small{font-size:24px}
+.eqn{font-family:var(--mono);font-size:15px;color:var(--muted);margin-bottom:-14px}
+.say{font-size:19px;color:var(--amber);font-style:italic;line-height:1.35;border-left:3px solid var(--amber);padding-left:12px}
+body.nosay .say{display:none}
+.cap{font-size:22px;line-height:1.4;color:var(--ink)}
+.cap b{color:var(--cyan);font-weight:500}
+.ctl{display:flex;flex-direction:column;gap:14px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+.ctl label{font-family:var(--mono);font-size:15px;color:var(--muted);display:flex;justify-content:space-between}
+.ctl label b{color:var(--ink);font-weight:500}
+.ctl input[type=range]{width:100%;accent-color:var(--cyan);height:26px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{border:1px solid var(--rule);background:transparent;border-radius:6px;padding:6px 12px;font-size:16px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--cyan);color:var(--bg);border-color:var(--cyan)}
+.steps{font-family:var(--mono);font-size:14px;color:var(--muted)}
+.vid{display:block;text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;font-size:18px}
+.vid small{display:block;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.vid:hover{border-color:var(--red)}
+.foot{position:absolute;left:56px;right:56px;bottom:22px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:14px;color:var(--muted)}
+.dots{display:flex;gap:6px;align-items:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--rule)}
+.dots i.on{background:var(--cyan)}
+/* book overlay */
+.book{position:absolute;right:40px;bottom:60px;width:620px;background:#fff;border-radius:6px;padding:14px;box-shadow:0 10px 50px rgba(0,0,0,.6);display:none;flex-direction:column;gap:10px;z-index:3}
+body.showbook .slide.on .book{display:flex}
+.book img{max-width:100%;display:block;margin:0 auto}
+.book span{font-family:var(--mono);font-size:13px;color:#4a545d;border-top:1px dashed #ccc;padding-top:6px}
+/* notes */
+#notes{position:fixed;left:0;right:0;bottom:0;background:#161f27;border-top:2px solid var(--amber);padding:12px 24px;font-size:17px;line-height:1.45;max-height:40%;overflow:auto;display:none;z-index:5}
+body.shownotes #notes{display:block}
+#notes h6{margin:0 0 4px;font-family:var(--mono);font-size:12px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+#notes p{margin:0 0 6px}
+#help{position:fixed;top:10px;right:12px;font-family:var(--mono);font-size:12px;color:#5b6872;z-index:4}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},svg:{fontCache:'global'}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js" async></script>
+</head>
+<body>
+<div id="help">← → slides · ↓ step · F fullscreen · B book · N notes · S say-lines</div>
+<div id="viewport"><div id="stage"></div></div>
+<aside id="notes"></aside>
+<script>
+/* ============ palette for canvas ============ */
+const C={bg:'#0a1015',ink:'#e7ecef',muted:'#8d9aa5',rule:'#24303a',grid:'#18222b',cyan:'#5cc6e6',amber:'#f2a65a',red:'#ff6f69',green:'#8fd17f',violet:'#b9a2f2'};
+const FONT='IBM Plex Sans, Arial, sans-serif', MONO='IBM Plex Mono, Menlo, monospace', SERIF='Newsreader, Georgia, serif';
+const R=String.raw;
+
+/* ============ drawing helpers ============ */
+function txt(x,y,s,o={}){const c=o.ctx||X;c.save();c.fillStyle=o.color||C.ink;c.font=(o.weight||'')+' '+(o.size||22)+'px '+(o.font||FONT);c.textAlign=o.align||'left';c.textBaseline=o.base||'middle';c.globalAlpha=o.alpha??1;c.fillText(s,x,y);c.restore();}
+function line(x1,y1,x2,y2,o={}){X.save();X.strokeStyle=o.color||C.ink;X.lineWidth=o.w||3;X.globalAlpha=o.alpha??1;if(o.dash)X.setLineDash(o.dash);X.beginPath();X.moveTo(x1,y1);X.lineTo(x2,y2);X.stroke();X.restore();}
+function arrow(x1,y1,x2,y2,o={}){line(x1,y1,x2,y2,o);const a=Math.atan2(y2-y1,x2-x1),h=o.head||16;X.save();X.fillStyle=o.color||C.ink;X.globalAlpha=o.alpha??1;X.beginPath();X.moveTo(x2,y2);X.lineTo(x2-h*Math.cos(a-.4),y2-h*Math.sin(a-.4));X.lineTo(x2-h*Math.cos(a+.4),y2-h*Math.sin(a+.4));X.closePath();X.fill();X.restore();}
+function midArrow(x1,y1,x2,y2,o={}){line(x1,y1,x2,y2,o);const mx=(x1+x2)/2,my=(y1+y2)/2,a=Math.atan2(y2-y1,x2-x1),h=16;X.save();X.fillStyle=o.color||C.ink;X.globalAlpha=o.alpha??1;X.beginPath();X.moveTo(mx+h/2*Math.cos(a),my+h/2*Math.sin(a));X.lineTo(mx-h/2*Math.cos(a)-h/2*Math.cos(a-1.57),my-h/2*Math.sin(a)-h/2*Math.sin(a-1.57));X.lineTo(mx-h/2*Math.cos(a)-h/2*Math.cos(a+1.57),my-h/2*Math.sin(a)-h/2*Math.sin(a+1.57));X.closePath();X.fill();X.restore();}
+function dot(x,y,r,col,a=1){X.save();X.globalAlpha=a;X.fillStyle=col;X.beginPath();X.arc(x,y,r,0,7);X.fill();X.restore();}
+function ring(x,y,r,col,w=2,a=1){X.save();X.globalAlpha=a;X.strokeStyle=col;X.lineWidth=w;X.beginPath();X.arc(x,y,r,0,7);X.stroke();X.restore();}
+function wavy(x1,y1,x2,y2,o={}){const L=Math.hypot(x2-x1,y2-y1),a=Math.atan2(y2-y1,x2-x1),n=Math.max(2,Math.round(L/22));X.save();X.strokeStyle=o.color||C.ink;X.lineWidth=o.w||3;X.globalAlpha=o.alpha??1;X.beginPath();for(let i=0;i<=80;i++){const s=i/80*L,off=Math.sin(s/L*n*Math.PI*2+(o.phase||0))*8;X.lineTo(x1+s*Math.cos(a)-off*Math.sin(a),y1+s*Math.sin(a)+off*Math.cos(a));}X.stroke();X.restore();}
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(x,a=0,b=1){return Math.max(a,Math.min(b,x))}
+function ease(t){t=clamp(t);return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function axes(x0,y0,w,h,o={}){ // y0 is bottom
+  X.save();X.strokeStyle=C.grid;X.lineWidth=1;
+  (o.xt||[]).forEach(([v,l])=>{const x=x0+v*w;line(x,y0,x,y0-h,{color:C.grid,w:1});txt(x,y0+22,l,{color:C.muted,size:16,align:'center',font:MONO});});
+  (o.yt||[]).forEach(([v,l])=>{const y=y0-v*h;line(x0,y,x0+w,y,{color:C.grid,w:1});txt(x0-10,y,l,{color:C.muted,size:16,align:'right',font:MONO});});
+  line(x0,y0,x0+w,y0,{color:C.muted,w:2});line(x0,y0,x0,y0-h,{color:C.muted,w:2});
+  if(o.xl)txt(x0+w,y0+50,o.xl,{color:C.muted,size:18,align:'right'});
+  if(o.yl){X.save();X.translate(x0-(o.ylo||60),y0-h/2);X.rotate(-Math.PI/2);txt(0,0,o.yl,{color:C.muted,size:18,align:'center'});X.restore();}
+  X.restore();
+}
+function curve(f,x0,y0,w,h,o={}){X.save();X.strokeStyle=o.color;X.lineWidth=o.w||4;X.globalAlpha=o.alpha??1;if(o.dash)X.setLineDash(o.dash);X.beginPath();let first=true;const n=300,end=o.upto??1;for(let i=0;i<=n*end;i++){const u=i/n,v=f(u);if(v==null||!isFinite(v)){first=true;continue;}const y=y0-clamp(v,-0.05,o.ymax??1.05)*h;if(first){X.moveTo(x0+u*w,y);first=false;}else X.lineTo(x0+u*w,y);}X.stroke();X.restore();}
+// seeded random
+let seed=7;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+
+/* ============ slides ============ */
+const VIDEOS={
+  ew:{id:'qKVpknSKgE0',ch:'PBS Space Time',title:'Electroweak Theory and the Origin of the Fundamental Forces'},
+  higgs:{id:'kixAljyfdqU',ch:'PBS Space Time',title:'The Higgs Mechanism Explained'},
+};
+const V1='PBS “Electroweak Theory…”', V2='PBS “The Higgs Mechanism Explained”';
+const SLIDES=[];
+const S=o=>SLIDES.push(o);
+
+/* 1 ─ title: the hook */
+S({id:'title',full:true,kick:'Smilga · Digestible QFT · Section 5.4',page:'book pp. 76–86 · PDF 80–90',title:'From β Decay to the Higgs Boson',
+ notes:R`<p><b>Say:</b> “Today’s story starts with a puzzle about radioactive decay in 1914 and ends with a particle found at CERN in 2012. On the way, the weak force and electromagnetism turn out to be one theory, and we find out where mass comes from.”</p><p><b>The thread to repeat:</b> every fix creates the next problem.</p><p><i>Borrowed from ${V1}, 00:00–00:57: open with a question, not a definition.</i></p>`,
+ draw(t){
+  const ev=[[1914,'β spectrum is continuous'],[1930,'Pauli: neutrino'],[1934,'Fermi: G_F'],[1957,'V − A'],[1967,'Weinberg–Salam'],[1973,'neutral currents'],[1983,'W and Z'],[2012,'Higgs boson']];
+  txt(744,110,'How did the weak force end up in the same theory as electromagnetism?',{font:SERIF,size:34,align:'center',alpha:clamp(t*1.5)});
+  const x0=110,x1=1380,y=390;line(x0,y,x1,y,{color:C.rule,w:3});
+  ev.forEach(([yr,l],i)=>{const k=ease(t*0.9-0.6-i*0.22);if(k<=0)return;const x=x0+(yr-1910)/(2015-1910)*(x1-x0);dot(x,y,9*k,i==ev.length-1?C.amber:C.cyan);
+   const up=i%2==0;line(x,y,x,y+(up?-60:60)*k,{color:C.rule,w:2});txt(x,y+(up?-90:90),String(yr),{font:MONO,size:22,color:C.cyan,align:'center',alpha:k});txt(x,y+(up?-122:122),l,{size:21,align:'center',alpha:k});});
+  txt(744,580,'Each fix creates the next problem.',{font:SERIF,size:30,align:'center',color:C.muted,alpha:clamp(t-2.8)});
+ }});
+
+/* 2 ─ beta spectrum */
+S({id:'spectrum',kick:'1914 · The missing energy',page:'p. 76',title:'Energy goes missing',
+ tex:R`$$n \to p + e^- + \bar\nu_e$$`,say:'“A neutron goes to a proton, an electron, and an electron antineutrino.” ν̄ = “nu-bar”.',
+ steps:3,cap:['Two bodies out: every electron gets the <b>same</b> energy.','Chadwick measured a <b>spread</b>. Was energy not conserved?','Pauli (1930): an invisible third particle carries the rest. The <b>neutrino</b>.'],
+ clips:[['fig5-11','Fig. 5.11 · p. 76']],
+ notes:R`<p><b>Say:</b> “β decay: a neutron turns into a proton and spits out an electron. The electron was called a ‘beta particle’ before anyone knew what it was.” <i>(${V1}, 01:11–01:24)</i></p><p>Step 1: “If only two things come out, momentum and energy conservation fix the electron’s energy. One sharp line.” Step 2: “Chadwick, 1914, sees a smear. Bohr even suggests energy is conserved only on average.” Step 3: “Pauli, 1930: no, there is a third particle we can’t see. Fermi calls it the neutrino.”</p><p>Ask the room: two bodies, how many ways to share the energy? Three?</p>`,
+ init(st){st.hist=new Array(40).fill(0);st.tk=0;st.parts=[];},
+ draw(t,st){
+  const cx=200,cy=320;dot(cx,cy,34,'#3a4a57');txt(cx,cy,'n',{align:'center',size:26});
+  st.tk+=1; if(st.tk%14==0){st.parts.push({a:rnd()*6.28,b:rnd()*6.28,s:0,T:st.step>=1?sampleBeta():0.75});}
+  st.parts=st.parts.filter(p=>p.s<1.2);
+  st.parts.forEach(p=>{p.s+=0.02;const d=40+p.s*150;dot(cx+Math.cos(p.a)*d,cy+Math.sin(p.a)*d,6,C.cyan,clamp(1.2-p.s));
+   if(st.step>=2){dot(cx+Math.cos(p.b)*d,cy+Math.sin(p.b)*d,6,C.amber,clamp(1.2-p.s)*0.7);}
+   if(!p.done&&p.s>1){p.done=true;st.hist[Math.min(39,Math.floor(p.T*40))]++;}});
+  txt(cx,cy+230,'e⁻',{color:C.cyan,align:'center',size:24});if(st.step>=2)txt(cx,cy+262,'ν̄  (unseen)',{color:C.amber,align:'center',size:22});
+  const x0=440,y0=560,w=500,h=420;axes(x0,y0,w,h,{xt:[[0,'0'],[1,'max']],xl:'electron energy',yl:'number of electrons',ylo:24});
+  const mx=Math.max(8,...st.hist);st.hist.forEach((v,i)=>{const bh=v/mx*h*0.95;X.fillStyle=st.step>=1?C.cyan:C.amber;X.globalAlpha=.85;X.fillRect(x0+i*w/40+1,y0-bh,w/40-2,bh);X.globalAlpha=1;});
+  if(st.step==0)txt(x0+0.75*w,y0-h-10,'expected: one line',{color:C.amber,align:'center',size:20});
+  if(st.step>=1)txt(x0+w*0.45,y0-h-10,'observed: a spread',{color:C.cyan,align:'center',size:20});
+ },
+ onstep(st){st.hist.fill(0);st.parts=[];}});
+function sampleBeta(){for(;;){const T=rnd(),m=0.5,E=T+m,f=Math.sqrt(T*(T+2*m))*E*(1-T)*(1-T);if(rnd()*0.55<f)return T;}}
+
+/* 3 ─ Fermi: they literally touch */
+S({id:'fermi',kick:'1934 · Fermi’s theory',page:'p. 76–77 · Eq. (5.21)',title:'All four particles touch',
+ eqn:'(5.21)',tex:R`$$G_F \approx 1.2\cdot 10^{-5}\ \text{GeV}^{-2}$$`,say:'“G-F is approximately one point two times ten to the minus five G-E-V to the minus two.”',
+ steps:2,cap:['One point, one number: Fermi’s constant $G_F$.','Its units are 1/mass², like gravity’s $G_N$. Remember that: it causes all the trouble later.'],
+ clips:[['fig5-11','Fig. 5.11 · p. 76'],['eq5-21','Eq. (5.21) · p. 77']],
+ notes:R`<p><b>Say:</b> “Fermi’s idea, 1934: the four particles literally touch. The neutron goes in, and the proton, electron and antineutrino come out of a single point.” <i>(${V1}, 01:46–02:07)</i></p><p>Step 2: “Fermi built this by copying electromagnetism (eq. 5.3), but the coupling has units: one over mass squared, like Newton’s constant. It is about 10³³ times bigger than $G_N$.”</p><p>Keep in your pocket: $G_F^{-1/2} \approx 290$ GeV.</p>`,
+ draw(t,st){
+  const vx=500,vy=300,ph=(t*0.5)%1;
+  const L=[[120,300,C.muted,'n',0],[880,90,C.cyan,'e⁻',1],[900,310,C.amber,'ν̄ₑ',1],[860,520,C.muted,'p',1]];
+  L.forEach(([x,y,c,l,out])=>{midArrow(out?vx:x,out?vy:y,out?x:vx,out?y:vy,{color:c,w:4});txt(x+(out?30:-20),y,l,{color:c,size:28,align:out?'left':'right'});
+   const px=out?lerp(vx,x,ph):lerp(x,vx,ph),py=out?lerp(vy,y,ph):lerp(y,vy,ph); dot(px,py,9,c);});
+  dot(vx,vy,12+3*Math.sin(t*6),C.ink);txt(vx-10,vy+44,'G_F',{size:28,font:SERIF,align:'right'});
+  if(st.step>=1){
+   const x0=110,y0=610,w=820;line(x0,y0,x0+w,y0,{color:C.rule});
+   const lg=v=>x0+(v+40)/(40)*w;
+   [[-39+Math.log10(6.7),'G_N  (gravity)',C.violet],[-5+Math.log10(1.2),'G_F  (weak)',C.cyan]].forEach(([e,l,c])=>{const x=lg(e);dot(x,y0,10,c);txt(x,y0-26,l,{color:c,size:20,align:'center'});});
+   [-40,-30,-20,-10,0].forEach(e=>txt(lg(e),y0+22,'10^'+e,{font:MONO,size:14,color:C.muted,align:'center'}));
+  }
+ }});
+
+/* 4 ─ cross section */
+S({id:'sigma',kick:'Why “weak”',page:'p. 77 · Eq. (5.22)',title:'Neutrinos almost never hit anything',
+ eqn:'(5.22)',tex:R`$$\sigma^{\text{tot}}_{\nu N} \sim G_F^2\,E_\nu^2$$`,say:'“Sigma total, nu-N, is of order G-F squared, E-nu squared.”',
+ cap:['At 1 MeV a neutrino crosses about <b>100 light years</b> of tungsten.','And the hit rate grows like $E^2$. Keep an eye on that.'],
+ ctl:[{id:'E',label:'neutrino energy',min:0,max:3,step:0.01,value:0,fmt:v=>{const E=Math.pow(10,v);return E<1000?E.toFixed(E<10?1:0)+' MeV':(E/1000).toFixed(1)+' GeV';}}],
+ clips:[['eq5-22','Eq. (5.22) · p. 77']],
+ notes:R`<p><b>Say:</b> “How often does a neutrino hit something? The cross section, $\sigma$, is an area. $G_F^2$ alone has the wrong units, so the energy must come in squared. Units decide the formula.”</p><p>Drag the slider: ×10 energy, ×100 hits. Then Smilga’s joke: Cowan and Reines saw neutrinos in 1956, and “the size of their installation was a little smaller than 100 light years”. They used a reactor: 5·10¹³ neutrinos per second, 3 hits per hour.</p>`,
+ init(st){st.nu=[];st.flash=[];st.atoms=[];seed=3;for(let i=0;i<140;i++)st.atoms.push([380+rnd()*300,60+rnd()*520]);},
+ draw(t,st){
+  X.fillStyle='#16212a';X.fillRect(370,40,320,560);txt(530,620,'block of tungsten',{color:C.muted,align:'center',size:18});
+  st.atoms.forEach(([x,y])=>dot(x,y,6,'#33424e'));
+  const E=Math.pow(10,st.v.E),p=Math.min(0.9,0.0004*E*E);
+  for(let i=0;i<3;i++)st.nu.push({x:0,y:60+rnd()*520,hit:rnd()<p?380+rnd()*300:9999});
+  st.nu.forEach(n=>{n.x+=14;if(n.x>n.hit&&!n.dead){n.dead=true;st.flash.push({x:n.x,y:n.y,a:1});}});
+  st.nu=st.nu.filter(n=>n.x<1000&&!n.dead);
+  st.nu.forEach(n=>line(n.x-26,n.y,n.x,n.y,{color:C.amber,w:2,alpha:.75}));
+  st.flash.forEach(f=>{ring(f.x,f.y,(1-f.a)*40+6,C.red,3,f.a);f.a-=0.02;});st.flash=st.flash.filter(f=>f.a>0);
+  txt(840,90,'hit rate',{color:C.muted,size:18,align:'center'});
+  txt(840,140,'×'+fmtBig(E*E),{color:C.cyan,size:40,font:MONO,align:'center'});
+  txt(840,190,'(compared to 1 MeV)',{color:C.muted,size:16,align:'center'});
+ }});
+function fmtBig(x){return x<1e4?x.toPrecision(3).replace(/\.0+$/,''):x.toExponential(0).replace('e+',' · 10^');}
+
+/* 5 ─ helicity */
+S({id:'helicity',kick:'1956–57 · A lopsided world',page:'p. 77–79 · Eq. (5.23), Fig. 5.12',title:'The universe is not ambidextrous',
+ eqn:'(5.23)',tex:R`$$h = \frac{\vec s\cdot\vec p}{|\vec p|}$$`,say:'“h equals s dot p over the magnitude of p.” Later: “V-mu goes to V-mu minus A-mu.”',
+ steps:2,cap:['In a mirror, momentum stays and spin <b>reverses</b>. So $h$ changes sign.','Nature only makes <b>left-handed</b> neutrinos. Fermi’s theory is patched (1957): $V_\\mu \\to V_\\mu - A_\\mu$.'],
+ clips:[['eq5-23','Eq. (5.23) · p. 77'],['fig5-12','Fig. 5.12 · p. 80']],
+ notes:R`<p><b>Say:</b> “Helicity is how a particle spins relative to where it is going: a corkscrew. Look in a mirror: the arrow of motion is the same, the rotation is reversed. Left-handed becomes right-handed.”</p><p>Step 2: “The weak force only makes left-handed neutrinos. The universe cares which way you spin.” <i>(${V2}, 04:03–04:47: “it’s not ambidextrous”)</i> “Corkscrews and sugars are handed by accident; neutrinos are handed by law.”</p><p>V−A: Marshak &amp; Sudarshan (“soo-DAR-shun”), Feynman &amp; Gell-Mann, 1957. Here $A_\mu$ is the axial current, not the photon.</p>`,
+ draw(t,st){
+  line(500,40,500,600,{color:C.muted,w:2,dash:[10,10]});
+  txt(250,600,'our world',{color:C.muted,align:'center',size:20});txt(750,600,'in the mirror',{color:C.muted,align:'center',size:20});
+  const y=360-((t*80)%220);
+  [[250,1],[750,-1]].forEach(([x,m])=>{
+   arrow(x+120*m,520,x+120*m,380,{color:C.cyan,w:4});txt(x+150*m,450,'p',{color:C.cyan,size:28,font:SERIF,align:'center'});
+   const ang=t*4*m;X.save();X.strokeStyle=C.ink;X.lineWidth=2;X.beginPath();X.ellipse(x,y,60,18,0,0,7);X.stroke();X.restore();
+   const px=x+60*Math.cos(ang),py=y+18*Math.sin(ang);dot(x,y,26,'#2e3c48');dot(px,py,8,C.amber,Math.sin(ang)>0?1:.35);
+   const sd=m>0?1:-1;arrow(x,y,x,y+90*sd,{color:C.amber,w:4});txt(x+24,y+60*sd,'s',{color:C.amber,size:28,font:SERIF});
+   txt(x,90,m>0?'h = −½':'h = +½',{size:34,font:MONO,align:'center',color:m>0?C.green:C.red});
+   if(st.step>=1)txt(x,135,m>0?'seen ✓':'never seen for ν',{size:20,align:'center',color:m>0?C.green:C.red});
+  });
+ }});
+
+/* 6 ─ Fermi breaks */
+S({id:'unitarity',kick:'Fermi’s theory breaks',page:'p. 79–81 · Eq. (5.24), Fig. 5.13',title:'A probability bigger than one',
+ eqn:'(5.24)',tex:R`$$E \sim G_F^{-1/2} \approx 290\ \text{GeV}$$`,say:'“E is of order G-F to the minus one-half.”',
+ steps:2,cap:['That $E^2$ growth cannot go on: probabilities add up to 1.','Its loop corrections blow up too (Fig. 5.13). Fermi’s theory only works at <b>low energy</b>.'],
+ clips:[['eq5-24','Eq. (5.24) · p. 80'],['fig5-13','Fig. 5.13 · p. 80']],
+ notes:R`<p><b>Say:</b> “Remember the $E^2$? Push the energy up and the probability passes one. That is nonsense. It happens when $G_F E^2 \sim 1$, around 300 GeV.”</p><p>Step 2: “Could quantum corrections fix it? No: every loop brings another $G_F$, and with its units the loops grow like $G_F\Lambda^2$ (‘LAM-duh’ is the cutoff). Not renormalizable. Fermi’s model only works at low energies.” <i>(${V1}, 02:19–02:24)</i></p>`,
+ draw(t,st){chartU(t,st,false);}});
+function chartU(t,st,withW){
+  const x0=120,y0=560,w=820,h=470,ymax=1.6;
+  axes(x0,y0,w,h,{xt:[[0,'1'],[1/3,'10'],[2/3,'100'],[1,'1000']],yt:[[0,'0'],[1/ymax,'1'],[1.5/ymax,'1.5']],xl:'energy E (GeV), log scale',yl:'size of the amplitude  G_F E²'});
+  const yl=y0-h/ymax;X.fillStyle='rgba(255,111,105,.08)';X.fillRect(x0,y0-h,w,h-h/ymax);line(x0,yl,x0+w,yl,{color:C.red,w:2,dash:[8,8]});
+  txt(x0+12,yl-20,'probability would exceed 1',{color:C.red,size:18});
+  const F=u=>{const E=Math.pow(10,3*u);return 1.2e-5*E*E/ymax;};
+  curve(F,x0,y0,w,h,{color:C.amber,upto:withW?1:clamp(t/2),ymax:1.05});
+  txt(x0+w*0.68,y0-h*0.86,'Fermi theory',{color:C.amber,size:22});
+  const xb=x0+Math.log10(289)/3*w;line(xb,y0,xb,yl,{color:C.ink,w:1,dash:[4,4]});txt(xb,y0-h-8,'≈ 290 GeV',{size:20,align:'center',font:MONO});
+  if(withW){const k=clamp((t-0.5)/2);const mW=80.4;const Wf=u=>{const E=Math.pow(10,3*u);return 1.2e-5*E*E/(1+E*E/(mW*mW))/ymax;};
+   curve(Wf,x0,y0,w,h,{color:C.cyan,upto:k,w:5});txt(x0+w*0.86,y0-h*0.13,'with a W boson',{color:C.cyan,size:22,align:'center',alpha:k});
+   const xw=x0+Math.log10(mW)/3*w;line(xw,y0,xw,y0-40,{color:C.cyan,w:2});txt(xw,y0-56,'m_W',{color:C.cyan,size:18,align:'center',font:SERIF});}
+}
+
+/* 7 ─ exchange, not touch */
+S({id:'wboson',kick:'The fix · a messenger',page:'p. 81–83 · Eq. (5.25), Fig. 5.14',title:'Don’t touch: exchange a W',
+ eqn:'(5.25)',tex:R`$$\begin{aligned}&\frac{g^2}{m_W^2-q^2}\\[6pt] \xrightarrow{\ q^2\ \ll\ m_W^2\ }\ &\frac{g^2}{m_W^2} = G_F\end{aligned}$$`,say:'“g squared over m-W squared minus q squared… goes over to g squared over m-W squared, which is G-F.”',
+ steps:3,cap:['In QED particles never touch. They <b>trade a photon</b>. Do the same here: trade a $W$.','The $W$ must be <b>charged</b> (a neutral neutron turns into a charged proton) and <b>heavy</b> (the force is so short-ranged).','Turn the energy down: the heavy $W$ line shrinks to a point. Fermi’s theory was a <b>low-energy approximation</b> all along.'],
+ ctl:[{id:'z',label:'energy of the collision',min:0,max:1,step:0.005,value:0.85,fmt:v=>v>0.66?'high (q² ~ m_W²)':v>0.25?'medium':'low (q² ≪ m_W²)'}],
+ clips:[['fig5-14','Fig. 5.14 · p. 81'],['eq5-25','Eq. (5.25) · p. 81']],
+ notes:R`<p><b>Say:</b> “Meanwhile electromagnetism worked beautifully. In QED charged particles don’t touch: they exchange a messenger, the photon. So: what if Fermi’s point is really an exchange too?” <i>(${V1}, 02:28–02:50)</i></p><p>Step 2: “The messenger has to carry electric charge, because the neutron is neutral and the proton is charged. That is the first hint that electromagnetism is involved. And it has to be heavy, because the weak force has such a short range.” <i>(${V1}, 03:12–03:46)</i></p><p>Step 3, drag the slider down: “At low energy $q^2$ is negligible, and $g^2/m_W^2$ is a constant at a point. That constant <i>is</i> $G_F$. Smilga: the W has been ‘integrated out’, like the electrons in Born–Oppenheimer (5.26).”</p><p>Book’s estimate (p. 85): take $g$ about the electron charge, 0.3, and $m_W \sim g/\sqrt{G_F} \approx 90$ GeV.</p>`,
+ draw(t,st){
+  const z=st.v.z,cx=500,cy=320,half=10+z*190,ph=t*3,a=clamp((half-30)/60);
+  const top=cy-half,bot=cy+half,s=150*(0.4+z*0.6)-40;
+  midArrow(170,top-s,cx,top,{color:C.amber,w:4});midArrow(cx,top,830,top-s,{color:C.cyan,w:4});
+  midArrow(170,bot+s,cx,bot,{color:C.cyan,w:4});midArrow(cx,bot,830,bot+s,{color:C.amber,w:4});
+  txt(150,top-s,'νₑ',{color:C.amber,size:26,align:'right'});txt(850,top-s,'e⁻',{color:C.cyan,size:26});
+  txt(150,bot+s,'e⁻',{color:C.cyan,size:26,align:'right'});txt(850,bot+s,'νₑ',{color:C.amber,size:26});
+  if(half>16){wavy(cx,top,cx,bot,{color:C.violet,w:4,phase:ph});txt(cx+30,cy,st.step>=1?'W  (charged, heavy)':'W',{color:C.violet,size:30,font:SERIF,alpha:a});
+   dot(cx,top,8,C.ink);dot(cx,bot,8,C.ink);txt(cx-24,top,'g',{font:SERIF,size:26,align:'right',alpha:a});txt(cx-24,bot,'g',{font:SERIF,size:26,align:'right',alpha:a});}
+  else{dot(cx,cy,13,C.ink);txt(cx-26,cy,'G_F',{font:SERIF,size:28,align:'right'});}
+  txt(500,40,z>0.25?'Fig. 5.14b · W exchange':'looks like Fig. 5.14a · Fermi',{color:C.muted,size:20,align:'center'});
+ }});
+
+/* 8 ─ not even close */
+S({id:'payoff',kick:'Problem solved?',page:'p. 83',title:'Problem solved? Not even close',
+ steps:2,cap:['With a $W$ the growth <b>levels off</b> near $m_W$. Unitarity is safe.','But a mass put in <b>by hand</b> breaks gauge invariance, the symmetry that makes QED work. The mass must come from somewhere else.'],
+ notes:R`<p><b>Say:</b> “With the W, the curve flattens out near $m_W$, far below the danger zone. Problem solved. Easy, right?” Pause. “Not even close.” <i>(${V1}, 04:13–04:28)</i></p><p>Step 2: “Theories with massless messengers, like QED, are protected by a symmetry called gauge invariance. Write a mass for the W by hand and you break it, and the infinities come back. Smilga: ‘life is sometimes harder than it seems’. The mass has to be generated by an interaction that respects the symmetry.”</p>`,
+ draw(t,st){chartU(t,st,true);if(st.step>=1){X.fillStyle='rgba(13,19,24,.82)';X.fillRect(160,180,720,170);txt(520,230,'m_W put in by hand',{size:30,align:'center',font:SERIF});txt(520,290,'✗ gauge invariance   ✗ renormalizable',{size:26,align:'center',color:C.red});}}});
+
+/* 9 ─ mass from the medium */
+S({id:'medium',kick:'Mass without breaking the rules',page:'p. 83–85 · Eqs. (5.27), (5.28)',title:'The rules stay symmetric. The medium gives the mass',
+ eqn:'(5.27) and (5.28)',tex:R`$$\begin{aligned}\omega^2-c^2k^2&=\Pi(\omega,k)\\[6pt] \omega_{pl}^2&=\frac{ne^2}{m}\end{aligned}$$`,say:'“Omega squared minus c squared k squared equals capital pi of omega, k.” “Omega P-L squared equals n e squared over m.”',
+ cap:['Light in a plasma: a gap opens at $k=0$. That gap acts as a <b>photon mass</b>.','In a superconductor the magnetic field dies after a short distance. Short range means a <b>massive</b> photon.'],
+ ctl:[{id:'m',type:'seg',label:'medium',options:[['plasma','plasma'],['sc','superconductor']],value:'plasma'},{id:'n',label:'density of the medium',min:0,max:1,step:0.01,value:0.5,fmt:v=>v<0.02?'0 (vacuum)':(v*100).toFixed(0)+'%'}],
+ clips:[['eq5-27','Eq. (5.27) · p. 83'],['eq5-28','Eq. (5.28) · p. 84']],
+ notes:R`<p><b>Say:</b> “Here’s the trick. The laws can be perfectly symmetric while the <i>state</i> the system sits in is not.” <i>(${V1}, 09:14–09:31; the video uses a cooling magnet, Smilga uses plasmas and superconductors.)</i></p><p>Plasma: “In vacuum $\omega = ck$. In a plasma there is an extra term. Compare $E^2 - p^2c^2 = m^2c^4$: the right side plays the role of mass squared. The gap is the plasma frequency, a photon mass made by the medium.” Drag the density.</p><p>Superconductor (toggle): “Meissner (‘MICE-ner’) effect: the field only gets in a short distance. Short range, massive photon. The relativistic version of this theory is called the Abelian Higgs model.” The scalar field doing it is the order parameter, the condensate of Cooper pairs (p. 85).</p>`,
+ draw(t,st){
+  if(st.v.m==='plasma'){
+   const x0=110,y0=570,w=840,h=500,wp=Math.sqrt(st.v.n)*0.55;
+   axes(x0,y0,w,h,{xl:'wave number k',yl:'frequency ω',ylo:80});
+   curve(u=>u*0.95,x0,y0,w,h,{color:C.muted,dash:[8,8],w:3});txt(x0+w*0.99,y0-h*0.78,'vacuum: ω = ck',{color:C.muted,size:18,align:'right'});
+   curve(u=>Math.sqrt(wp*wp+u*u*0.9),x0,y0,w,h,{color:C.cyan,w:5});
+   if(wp>0.02){const yg=y0-wp*h;arrow(x0+40,y0,x0+40,yg,{color:C.amber,w:3});X.fillStyle=C.bg;X.fillRect(x0+52,(y0+yg)/2-18,210,36);txt(x0+60,(y0+yg)/2,'gap ∝ photon mass',{color:C.amber,size:22});txt(x0-12,yg,'ω_pl',{color:C.amber,size:20,align:'right',font:SERIF});}
+   const u=(t*0.15)%1,v=Math.sqrt(wp*wp+u*u*0.9);dot(x0+u*w,y0-v*h,9,C.cyan);
+  } else {
+   const sx=480,n=st.v.n,lam=n<0.02?9999:30+(1-n)*200;X.fillStyle=n<0.02?'#222a31':'#1b2c3a';X.fillRect(sx,60,440,520);
+   txt(sx+220,600,n<0.02?'normal metal':'superconductor',{color:C.muted,size:20,align:'center'});
+   for(let i=0;i<9;i++){const y=90+i*58,off=(t*120)%60;
+    for(let x=20;x<960;x+=60){const xx=x+off;let a=1;if(xx>sx)a=Math.exp(-(xx-sx)/lam);if(a<0.03)continue;arrow(xx,y,xx+36,y,{color:C.violet,w:3,alpha:a,head:10});}}
+   if(n>=0.02){line(sx,40,sx+lam,40,{color:C.amber,w:3});txt(sx+lam/2,22,'penetration depth',{color:C.amber,size:18,align:'center'});}
+   txt(200,620,'magnetic field',{color:C.violet,size:20,align:'center'});
+  }
+ }});
+
+/* 10 ─ the Higgs field */
+S({id:'higgs',kick:'The Higgs mechanism',page:'p. 84–86',title:'A field that is never zero',
+ tex:R`$$\text{scalar field} \;\Rightarrow\; m_W,\ m_Z,\ m_{e},\ m_{q}$$`,say:'“A scalar field gives mass to the W, the Z, the electron and the quarks.” Scalar = “SKAY-lur”.',
+ steps:3,cap:['Fields fill all of space. In empty space they sit at <b>zero</b>.','The Higgs field doesn’t: it has the same <b>nonzero</b> value everywhere. The photon passes straight through. The $W$, $Z$, electron and quarks keep <b>bumping</b> into it. That is their mass.','Pluck the field and it ripples. The ripple is the <b>Higgs boson</b>. It doesn’t give mass, but finding it proves the field is there.'],
+ notes:R`<p><b>Say:</b> “Every particle is a vibration of a field that fills the universe. In empty space those fields sit at zero.” <i>(${V2}, 01:08–01:41: pluck a guitar string)</i></p><p>Step 2: “The Higgs field is different. It has a nonzero value everywhere. A photon crosses the universe without bumping into anything. An electron, or a W, is never not bumping into it. That constant bumping is what we call mass.” <i>(${V2}, 03:38–03:58 and 05:04–05:14)</i> Smilga’s version: like the Cooper-pair condensate in a superconductor, but a fundamental field; and the quark and lepton masses come from it too, because putting them in by hand would also break gauge invariance (p. 86).</p><p>Step 3: “Pluck the Higgs field and you get a ripple: the Higgs boson. The boson itself gives nothing mass. But if you see the ripple, you know the field is there.” <i>(${V2}, 06:24–06:41)</i></p>`,
+ init(st){st.wx=0;st.gx=0;st.flash={};},
+ onstep(st){st.wx=0;st.gx=0;st.flash={};},
+ draw(t,st){
+  /* one clock: st.tt = seconds since the current step began */
+  const on=st.step>=1? (st.step==1&&!st.back? ease(st.tt/1.6) : 1) : 0;   // field switching on
+  const lift=26*on;                                              // how far every node sits above its zero line
+  const cols=21,rows=7,gx0=40,gdx=40,gy0=110,gdy=72;
+  const cxp=440,cyp=326;                                         // pluck point
+  const per=3.2,ph=st.step>=2? st.tt%per : -1,R=ph<0?-1:40+ph*230; // ripple radius, restarts every 3.2 s
+  // field nodes: a grid that fills space
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+   const x=gx0+c*gdx,y0=gy0+r*gdy,jit=2*Math.sin(t*3+c*1.7+r*2.3);
+   let rip=0;if(R>0){const d=Math.hypot(x-cxp,y0-cyp);rip=22*Math.exp(-Math.pow((d-R)/34,2))*clamp(1.4-ph/per);}
+   const y=y0-lift-jit-rip;const key=r+'_'+c,fl=st.flash[key]||0;
+   line(x,y0,x,y,{color:C.green,w:2,alpha:.35});
+   dot(x,y,4+on*2+fl*6+rip*0.15,fl>0?C.ink:C.green,.45+on*.45);
+   if(fl>0)st.flash[key]=fl-0.05;
+  }
+  // photon on row 1: same speed whatever the field does
+  const py=gy0+1*gdy;st.gx=(st.gx+9)%960;wavy(st.gx-90,py-lift,st.gx,py-lift,{color:C.amber,w:4,phase:t*10});
+  // W on row 5: slows down and lights up every node it passes once the field is on
+  const wyr=5,wy0=gy0+wyr*gdy;const prev=st.wx;st.wx=(st.wx+(9-6*on))%880;
+  if(on>0.5){for(let c=0;c<cols;c++){const x=gx0+c*gdx;if(prev<x&&st.wx>=x)st.flash[wyr+'_'+c]=1;}}
+  const wy=wy0-lift-(on>0.5?4*Math.sin(t*30):0);dot(st.wx,wy,15,C.violet);txt(st.wx,wy-30,'W',{color:C.violet,size:24,font:SERIF,align:'center'});
+  // labels follow the same clock as the picture
+  const lbl=st.step==0?'a field fills space · empty space: value 0':on<0.5?'the Higgs field switches on…':'Higgs field: the same nonzero value everywhere';
+  X.fillStyle=C.bg;X.fillRect(30,6,940,44);txt(40,28,lbl,{color:C.green,size:21});
+  txt(880,py-lift-34,'γ photon: passes straight through',{color:C.amber,size:18,align:'right'});
+  X.fillStyle=C.bg;X.fillRect(520,wy0-lift+24,370,30);txt(880,wy0-lift+40,on>0.5?'W: bumps at every step → mass':'W: nothing to bump into',{color:C.violet,size:18,align:'right'});
+  if(R>0&&ph<per*0.75){const ly=Math.max(70,cyp-R-30);X.fillStyle=C.bg;X.fillRect(cxp-80,ly-16,160,32);txt(cxp,ly,'Higgs boson',{color:C.amber,size:22,align:'center',alpha:clamp(1.4-ph/per)});}
+  if(st.step>=2&&ph<0.4)ring(cxp,cyp,10+ph*60,C.amber,3,1-ph/0.4);
+  // field-value meter: rises exactly with the nodes
+  const mx=955,my0=560;line(mx-25,my0,mx+25,my0,{color:C.muted,w:2});line(mx-25,my0-104,mx+25,my0-104,{color:C.rule,w:1,dash:[4,4]});X.fillStyle=C.green;X.fillRect(mx-12,my0-lift*4,24,lift*4);
+  txt(mx,my0+20,'field value',{color:C.muted,size:14,align:'center'});txt(mx,my0-122,on>0.5?'≠ 0':'0',{color:C.green,size:20,align:'center',font:MONO});
+ }});
+
+/* 11 ─ one theory, one angle */
+S({id:'masses',kick:'Weinberg 1967 · Salam 1968 · Glashow 1961',page:'p. 84–85 · Eqs. (5.29)–(5.31)',title:'One theory, one angle, two masses',
+ eqn:'(5.29)',tex:R`$$\begin{aligned}m_W&=\frac{1}{\sin\theta_W}\sqrt{\frac{\pi\alpha}{G_F\sqrt2}}\\[4pt] m_Z&=\frac{m_W}{\cos\theta_W}\end{aligned}$$`,say:'“m-W equals one over sine theta-W, root of pi alpha over G-F root two. m-Z equals m-W over cosine theta-W.” θ = “THAY-tuh”, α = “AL-fuh”.',
+ cap:['The $W$ is charged, so the photon must be in the same theory: <b>electroweak</b>. It adds a neutral $Z$.','Measured at CERN in 1983: $m_W = 80.4$, $m_Z = 91.2$ GeV (5.30), so $\\sin^2\\theta_W = 0.2312$ (5.31).'],
+ ctl:[{id:'s2',label:'sin²θ_W',min:0.15,max:0.35,step:0.0001,value:0.2312,fmt:v=>v.toFixed(4)},{id:'a',type:'seg',label:'α',options:[['137','1/137'],['128','1/128 (at the Z mass)']],value:'137'}],
+ clips:[['eq5-29','Eq. (5.29) · p. 85'],['eq5-30','Eq. (5.30) · p. 85'],['eq5-31','Eq. (5.31) · p. 85']],
+ notes:R`<p><b>Say:</b> “Remember the W had to be charged? Charged things talk to photons. So you can’t build the weak theory and leave the photon out: it has to be one theory, electroweak. Weinberg and Salam built it on the Higgs mechanism; Glashow had predicted a neutral partner, the Z. Nobel Prize 1979.” <i>(${V1}, 11:14–12:00 tells the same punchline with symmetry groups; we stay with the book.)</i></p><p>The calculator: “Everything is fixed by $\alpha$, $G_F$ and one angle, the Weinberg angle. $\cos\theta_W = m_W/m_Z$: it’s a triangle.”</p><p>If someone checks: with α = 1/137 you get 77.5 GeV, not 80.4. The formula is lowest order; at the Z mass α ≈ 1/128 and it gives 80.2. Read numbers as “eighty point four”, “ninety-one point two”.</p>`,
+ draw(t,st){
+  const a=st.v.a==='128'?1/127.95:1/137.036,s2=st.v.s2,sn=Math.sqrt(s2),cs=Math.sqrt(1-s2);
+  const mW=Math.sqrt(Math.PI*a/(1.1664e-5*Math.SQRT2))/sn,mZ=mW/cs;
+  const ox=70,oy=540,sc=5,th=Math.acos(cs);
+  const ax=ox+mW*sc,ay=oy,bx=ox+mZ*sc*Math.cos(th),by=oy-mZ*sc*Math.sin(th);
+  line(ox,oy,ax,ay,{color:C.cyan,w:5});line(ox,oy,bx,by,{color:C.violet,w:5});line(ax,ay,bx,by,{color:C.rule,w:2,dash:[6,6]});
+  X.save();X.strokeStyle=C.amber;X.lineWidth=3;X.beginPath();X.arc(ox,oy,70,-th,0);X.stroke();X.restore();
+  txt(ox+90,oy-18,'θ_W = '+(th*180/Math.PI).toFixed(1)+'°',{color:C.amber,size:22,font:MONO});
+  txt((ox+ax)/2,oy+34,'m_W',{color:C.cyan,size:26,font:SERIF,align:'center'});txt((ox+bx)/2-20,(oy+by)/2-20,'m_Z',{color:C.violet,size:26,font:SERIF,align:'right'});
+  const bx0=600,by0=560,bh=4.6;[['m_W',mW,80.4,C.cyan],['m_Z',mZ,91.2,C.violet]].forEach(([l,v,m,c],i)=>{const x=bx0+i*180;X.fillStyle=c;X.fillRect(x,by0-v*bh,110,v*bh);
+   line(x-14,by0-m*bh,x+124,by0-m*bh,{color:C.ink,w:2,dash:[6,4]});txt(x+55,by0-v*bh+30,v.toFixed(1),{font:MONO,size:26,align:'center',color:'#0a1015',weight:'600'});txt(x+55,by0+28,l,{font:SERIF,size:26,align:'center'});});
+  txt(bx0+145,80,'- - -  measured (5.30)',{color:C.ink,size:18,align:'center'});txt(bx0+145,108,'GeV',{color:C.muted,size:16,align:'center'});
+ }});
+
+/* 12 ─ confirmations */
+S({id:'found',kick:'1973 · 1983 · 2012 · CERN',page:'p. 85–86 · Fig. 5.16',title:'Predicted, then found',
+ tex:R`$$m_H \approx 125\ \text{GeV}$$`,say:'“m-H is about one hundred twenty-five G-E-V.”',
+ steps:3,cap:['<b>1973</b>: neutral currents. A neutrino bounces off a proton via a $Z^0$ and stays a neutrino (Fig. 5.16). Fermi’s theory has no room for that.','<b>1983</b>: the $W$ and $Z$ themselves, at the masses in (5.30).','<b>2012</b>: the Higgs boson at about 125 GeV. Smilga: “the keystone in the central vault” of the Standard Model.'],
+ clips:[['fig5-16','Fig. 5.16 · p. 86']],
+ notes:R`<p><b>Say:</b> “A good theory predicts things the old one forbids.” Step 1: neutral currents, 1973. In atoms too: parity violation, Novosibirsk 1978. Step 2: W and Z, 1983. Step 3: “And in 2012 the bump appears at 125 GeV.” <i>(${V2}, 06:50–07:07)</i></p><p>The chart is an illustration of a bump growing out of the background as data accumulate. Not real data.</p><p>Close with the chapter’s last line: “We all hope to live to see unpredictable and unpredicted discoveries. But they will be the subject of some other book…”</p>`,
+ init(st){st.h=new Array(50).fill(0);seed=11;},
+ draw(t,st){
+  if(st.step<2){
+   const ph=(t*0.35)%1,vx=500,vy=200,px=500,py=440;
+   midArrow(120,70,vx,vy,{color:C.amber,w:4});midArrow(vx,vy,880,70,{color:C.amber,w:4});txt(100,70,'ν',{color:C.amber,size:30,font:SERIF,align:'right'});txt(900,70,'ν',{color:C.amber,size:30,font:SERIF});
+   line(vx,vy,px,py,{color:C.violet,w:4,dash:[10,8]});txt(vx+26,(vy+py)/2,'Z⁰',{color:C.violet,size:30,font:SERIF});
+   midArrow(120,530,px,py,{color:C.cyan,w:4});txt(100,530,'p',{color:C.cyan,size:30,font:SERIF,align:'right'});
+   const k=ph>0.5?ease((ph-0.5)*2):0;dot(px,py,14,C.ink);
+   for(let i=0;i<6;i++){const a=-0.5+i*0.22;if(k>0)arrow(px,py,px+Math.cos(a)*360*k,py+Math.sin(a)*160*k+60*k,{color:C.cyan,w:2,alpha:1-k*0.3,head:10});}
+   if(k>0.5)txt(900,530,'hadrons',{color:C.cyan,size:24,alpha:(k-0.5)*2});
+   const p=ph<0.5?ph*2:1;dot(lerp(120,vx,clamp(p*1.4)),lerp(70,vy,clamp(p*1.4)),9,C.amber);
+   if(st.step>=1){X.fillStyle='rgba(13,19,24,.85)';X.fillRect(560,470,420,140);txt(770,510,'W   80.4 GeV',{font:MONO,size:30,color:C.cyan,align:'center'});txt(770,565,'Z   91.2 GeV',{font:MONO,size:30,color:C.violet,align:'center'});}
+   return;
+  }
+  const x0=110,y0=550,w=840,h=450;axes(x0,y0,w,h,{xt:[[0,'100'],[0.5,'125'],[1,'150']],xl:'mass (GeV)',yl:'events',ylo:30});
+  for(let k=0;k<25;k++){let m;if(rnd()<0.06){m=125+gauss()*1.8;}else{for(;;){m=100+rnd()*50;if(rnd()<Math.exp(-(m-100)/30))break;}}const b=Math.floor((m-100)/50*50);if(b>=0&&b<50)st.h[b]++;}
+  const mx=Math.max(...st.h,1);st.h.forEach((v,i)=>{dot(x0+(i+.5)*w/50,y0-v/mx*h*0.9,5,C.ink);});
+  txt(x0+w/2,y0-h-4,'illustration, not real data',{color:C.muted,size:16,align:'center'});
+  if(st.h[0]>4000)st.h.fill(0);
+ },
+ onstep(st){st.h.fill(0);}});
+function gauss(){return Math.sqrt(-2*Math.log(rnd()+1e-9))*Math.cos(6.283*rnd());}
+
+/* 13 ─ recap */
+S({id:'recap',full:true,kick:'Recap',page:'Section 5.4 · pp. 76–86',title:'Each fix, the next problem',
+ notes:R`<p>Questions for the room: Why must σ grow like E²? In a mirror, which flips, spin or momentum? When can nobody tell Fig. 5.14a from b? Why can’t the photon be left out? Does the Higgs boson give mass?</p>`,
+ draw(t){
+  const rows=[['energy goes missing in β decay','the neutrino; Fermi’s point interaction','5.21–5.22'],['the weak force is left-handed','helicity; V − A','5.23'],['Fermi’s theory breaks near 300 GeV','exchange a heavy, charged W','5.24–5.25'],['a mass by hand breaks the symmetry','mass from a medium; the Higgs field','5.27–5.28'],['the W is charged','one electroweak theory; W, Z, Higgs found','5.29–5.31']];
+  rows.forEach(([p,f,e],i)=>{const k=ease(t*1.2-i*0.35);if(k<=0)return;const y=70+i*100;
+   txt(80,y,p,{size:27,color:C.red,alpha:k});arrow(640,y,710,y,{color:C.muted,w:3,alpha:k});txt(730,y,f,{size:27,color:C.cyan,alpha:k});txt(1440,y,'('+e+')',{size:20,font:MONO,color:C.muted,align:'right',alpha:k});});
+  const k=clamp(t-2.5);txt(80,590,'Storytelling after PBS Space Time: “'+VIDEOS.ew.title+'” and “'+VIDEOS.higgs.title+'”.',{size:18,color:C.muted,alpha:k});
+ }});
+
+/* ============ build DOM ============ */
+const stage=document.getElementById('stage');let X;
+SLIDES.forEach((s,i)=>{
+  const el=document.createElement('section');el.className='slide'+(s.full?' full':'');el.id='sl-'+s.id;
+  const ctl=(s.ctl||[]).map(c=>c.type==='seg'?`<div><label><span>${c.label}</span></label><div class="seg" data-seg="${c.id}">${c.options.map(o=>`<button aria-pressed="${o[0]===c.value}" data-v="${o[0]}">${o[1]}</button>`).join('')}</div></div>`
+    :`<div><label for="r-${s.id}-${c.id}"><span>${c.label}</span><b id="o-${s.id}-${c.id}"></b></label><input type="range" id="r-${s.id}-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.value}"></div>`).join('');
+  const caps=(s.cap||[]).map((c,j)=>`<p class="cap" data-cap="${j}">${c}</p>`).join('');
+  const v=s.video&&VIDEOS[s.video];
+  el.innerHTML=`<div class="head"><div class="kick">${s.kick}<span class="pg">${s.page}</span></div><h1>${s.title}</h1></div>
+   <canvas width="${s.full?2976:2000}" height="1280"></canvas>
+   ${s.full?'':`<div class="right">${s.eqn?`<div class="eqn">${s.eqn}</div>`:''}${s.tex?`<div class="tex${s.tex.length>90?' small':''}">${s.tex}</div>`:''}${s.say?`<div class="say">${s.say}</div>`:''}${caps}${ctl?`<div class="ctl">${ctl}</div>`:''}${s.steps?`<div class="steps"></div>`:''}${v?`<a class="vid" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><small>video · ${v.ch}</small>${v.title}</a>`:''}</div>`}
+   ${(s.clips||[]).length?`<div class="book">${s.clips.map(c=>`<img src="clips/${c[0]}.png" alt="${c[1]}"><span>${c[1]}</span>`).join('')}</div>`:''}
+   <div class="foot"><span>Smilga, Digestible QFT · §5.4</span><span class="dots">${SLIDES.map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</span><span>${i+1} / ${SLIDES.length}</span></div>`;
+  stage.appendChild(el);
+  s.el=el;s.cv=el.querySelector('canvas');s.st={step:0,v:{},tt:0};
+  (s.ctl||[]).forEach(c=>{s.st.v[c.id]=c.type==='seg'?c.value:+c.value;
+    if(c.type==='seg'){el.querySelectorAll(`[data-seg="${c.id}"] button`).forEach(b=>b.onclick=()=>{s.st.v[c.id]=b.dataset.v;el.querySelectorAll(`[data-seg="${c.id}"] button`).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});}
+    else{const r=el.querySelector(`#r-${s.id}-${c.id}`),o=el.querySelector(`#o-${s.id}-${c.id}`);const f=()=>{s.st.v[c.id]=+r.value;o.textContent=c.fmt?c.fmt(+r.value):r.value;};r.oninput=f;f();}});
+});
+// the full-width title/recap use no right column; notes per slide
+let cur=0,t0=performance.now(),stepT=performance.now();
+function show(i){
+  if(i<0||i>=SLIDES.length)return;cur=i;SLIDES.forEach((s,j)=>s.el.classList.toggle('on',j===i));
+  const s=SLIDES[i];s.st.step=0;seed=7;if(s.init)s.init(s.st);t0=performance.now();stepT=t0;updSteps();
+  document.getElementById('notes').innerHTML=`<h6>Notes · ${i+1}. ${s.title}</h6>${s.notes||''}`;
+  if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([document.getElementById('notes')]).catch(()=>{});
+  if(location.hash!=='#'+s.id)history.replaceState(null,'','#'+s.id);
+  if(window.MathJax&&MathJax.startup&&MathJax.startup.promise)MathJax.startup.promise.then(()=>fitTex(s));
+}
+function fitTex(s){s.el.querySelectorAll('.tex').forEach(d=>{d.style.fontSize='';let fs=parseFloat(getComputedStyle(d).fontSize);const c=d.querySelector('mjx-container');if(!c)return;let n=0;while(c.scrollWidth>d.clientWidth+1&&fs>14&&n++<40){fs-=1;d.style.fontSize=fs+'px';}});}
+function updSteps(){const s=SLIDES[cur];const n=Math.max(s.steps||0,(s.cap||[]).length);
+  s.el.querySelectorAll('[data-cap]').forEach(p=>{const j=+p.dataset.cap;p.style.display=(s.steps? j<=s.st.step : true)?'':'none';});
+  const sd=s.el.querySelector('.steps');if(sd)sd.textContent=s.st.step+1<s.steps?`↓ next step (${s.st.step+1}/${s.steps})`:`step ${s.steps}/${s.steps}`;}
+function next(){const s=SLIDES[cur];if(s.steps&&s.st.step<s.steps-1){s.st.step++;s.st.tt=0;s.st.back=false;stepT=performance.now();if(s.onstep)s.onstep(s.st);updSteps();}else show(cur+1);}
+function prev(){const s=SLIDES[cur];if(s.steps&&s.st.step>0){s.st.step--;s.st.back=true;stepT=performance.now();if(s.onstep)s.onstep(s.st);updSteps();}else show(cur-1);}
+
+function frame(now){
+  const s=SLIDES[cur];X=s.cv.getContext('2d');X.setTransform(2,0,0,2,0,0);X.clearRect(0,0,s.cv.width,s.cv.height);
+  const t=(now-t0)/1000;s.st.tt=(now-stepT)/1000;
+  try{s.draw&&s.draw(t,s.st);}catch(e){console.error(e);}
+  requestAnimationFrame(frame);
+}
+function fit(){const k=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform=`scale(${k})`;}
+addEventListener('resize',fit);fit();
+addEventListener('keydown',e=>{if(e.target.matches('input')&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))return;
+  const k=e.key;if(k==='ArrowRight'||k==='PageDown'||k===' '||k==='ArrowDown'){e.preventDefault();next();}
+  else if(k==='ArrowLeft'||k==='PageUp'||k==='ArrowUp'){e.preventDefault();prev();}
+  else if(k==='b'||k==='B')document.body.classList.toggle('showbook');
+  else if(k==='n'||k==='N')document.body.classList.toggle('shownotes');
+  else if(k==='s'||k==='S')document.body.classList.toggle('nosay');
+  else if(k==='f'||k==='F'){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}catch(_){}}
+  else if(k==='Home')show(0);else if(k==='End')show(SLIDES.length-1);});
+stage.addEventListener('click',e=>{if(e.target.closest('button,input,a,.ctl'))return;next();});
+const h=location.hash.slice(1),hi=SLIDES.findIndex(s=>s.id===h);show(hi<0?0:hi);
+requestAnimationFrame(frame);
+if(location.search.includes('check')){(function w(){if(!(window.MathJax&&MathJax.startup&&MathJax.startup.promise))return setTimeout(w,100);MathJax.startup.promise.then(()=>{const bad=[];const sr=stage.getBoundingClientRect();
+ SLIDES.forEach((s,i)=>{show(i);fitTex(s);s.st.step=(s.steps||1)-1;updSteps();
+  s.el.querySelectorAll('.right *, canvas, h1, .kick').forEach(e=>{const r=e.getBoundingClientRect();if(r.width&&(r.right>sr.right+1||r.bottom>sr.bottom-40))bad.push((i+1)+' '+s.id+' '+e.tagName+'.'+(e.className||'')+' right='+Math.round(r.right)+' bottom='+Math.round(r.bottom));});
+  s.el.querySelectorAll('.tex').forEach(d=>{const c=d.querySelector('mjx-container');if(c&&c.scrollWidth>d.clientWidth+1)bad.push((i+1)+' '+s.id+' tex too wide');});});
+ const pre=document.createElement('pre');pre.id='checkout';pre.textContent='CHECK '+(bad.join('\n')||'all fit');document.body.appendChild(pre);});})();}
+</script>
+</body>
+</html>
